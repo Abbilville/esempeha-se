@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block meta %}
+<title>Page Not Found</title>
+{% endblock meta %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center p-5">
+    <div class="max-w-md w-full bg-white rounded-lg shadow-md p-8">
+        <h1 class="text-3xl font-bold text-red-600 mb-4">404 - Page Not Found</h1>
+        <p class="text-gray-700 mb-4">The page you are looking for does not exist.</p>
+        <p class="text-gray-700 mb-4">{{ exception }}</p>
+        <a href="/" class="inline-block text-blue-600 hover:underline">Go back to homepage</a>
+    </div>
+</div>
+{% endblock content %}

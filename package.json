@@ -1,0 +1,12 @@
+{
+  "name": "tk-project",
+  "version": "1.0.0",
+  "description": "Django project with Tailwind CSS",
+  "scripts": {
+    "build": "tailwindcss -i ./static/css/input.css -o ./static/css/output.css",
+    "watch": "tailwindcss -i ./static/css/input.css -o ./static/css/output.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.3.3"
+  }
+}
