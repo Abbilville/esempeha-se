@@ -15,10 +15,10 @@
 
 ## Setting Up the Environment
 
-### 1. Clone the Repository (if applicable)
+### 1. Clone the Repository
 
 ```bash
-git clone [repository-url] TK
+git clone https://github.com/Abbilville/esempeha-se TK
 cd TK
 ```
 
