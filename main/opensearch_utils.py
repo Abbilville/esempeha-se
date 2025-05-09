@@ -11,8 +11,8 @@ def get_opensearch_client():
     client = OpenSearch(
         hosts=[{'host': settings.OPENSEARCH_HOST, 'port': settings.OPENSEARCH_PORT}],
         http_conn_class=RequestsHttpConnection,
-        use_ssl=False, # Set to True if your OpenSearch uses SSL
-        verify_certs=False, # Set to True in production with valid certs
+        use_ssl=False,
+        verify_certs=False,
         ssl_show_warn=False,
     )
     return client
@@ -35,7 +35,7 @@ def create_index_if_not_exists(client, index_name):
                     "doc_id": {"type": "keyword"},
                     "title": {"type": "text", "analyzer": "english"},
                     "text": {"type": "text", "analyzer": "english"},
-                    "url": {"type": "keyword"} # NFCorpus docs have a URL
+                    "url": {"type": "keyword"}
                 }
             }
         }
@@ -62,7 +62,7 @@ def index_nfcorpus_data(client, index_name, max_docs=None):
     """Loads nfcorpus data and indexes it into OpenSearch."""
     logger.info("Loading nfcorpus dataset...")
     try:
-        dataset = ir_datasets.load("nfcorpus") # Consider nfcorpus/train for a smaller set initially
+        dataset = ir_datasets.load("nfcorpus")
     except Exception as e:
         logger.error(f"Failed to load ir_datasets 'nfcorpus': {e}. Ensure it's downloaded or network is available.")
         return
@@ -98,9 +98,7 @@ def index_nfcorpus_data(client, index_name, max_docs=None):
         # If max_docs is set and we have processed enough documents
         if max_docs and num_processed_successfully >= max_docs:
             logger.info(f"Reached max_docs limit of {max_docs}. Stopping indexing.")
-            # The current 'doc' was read but will not be processed.
-            # num_read_attempts already includes this read.
-            num_read_attempts -=1 # Adjust as this doc was read but not processed.
+            num_read_attempts -=1
             break
         
         # NFCorpusDoc has doc_id, url, title, abstract
@@ -110,7 +108,7 @@ def index_nfcorpus_data(client, index_name, max_docs=None):
         document_data = {
             "doc_id": doc.doc_id,
             "title": title,
-            "text": content, # Store abstract in the 'text' field for consistency with mapping
+            "text": content,
             "url": doc.url
         }
         index_document(client, index_name, doc.doc_id, document_data)

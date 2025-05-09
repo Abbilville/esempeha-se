@@ -26,6 +26,7 @@ def get_llm_summary(query: str, documents: list, max_doc_length=700):
     for i, doc in enumerate(documents[:3]): # Use top 3 documents for context
         doc_text = doc.get('text', '') # 'text' field contains the abstract
         doc_title = doc.get('title', 'Document')
+
         # Ensure snippet is not empty and is a string
         snippet_text = str(doc_text) if doc_text else "No abstract available."
         snippet = snippet_text[:max_doc_length] + "..." if len(snippet_text) > max_doc_length else snippet_text
@@ -46,7 +47,7 @@ def get_llm_summary(query: str, documents: list, max_doc_length=700):
         "inputs": prompt,
         "parameters": {
             "max_new_tokens": 250, # Max tokens for the generated summary
-            "temperature": 0.5,    # Controls randomness, lower is more deterministic
+            "temperature": 0.5, # Controls randomness, lower is more deterministic
             "return_full_text": False, # Return only the generated text
             "wait_for_model": True, # Wait if the model is loading
         },
