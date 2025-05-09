@@ -71,7 +71,7 @@
             {{ result.text|linebreaksbr }}
           </span>
           {% if result.text|wordcount > 35 %}
-          <button onclick="toggleAbstract({{ forloop.counter }})" id="toggler-{{ forloop.counter }}" class="text-blue-600 hover:text-blue-800 hover:underline text-sm ml-1">
+          <button onclick="toggleText({{ forloop.counter }})" id="toggler-{{ forloop.counter }}" class="text-blue-600 hover:text-blue-800 hover:underline text-sm ml-1">
             See more
           </button>
           {% endif %}
@@ -89,7 +89,7 @@
 </div>
 
 <script>
-function toggleAbstract(counter) {
+function toggleText(counter) {
     const shortAbstract = document.getElementById(`abstract-short-${counter}`);
     const fullAbstract = document.getElementById(`abstract-full-${counter}`);
     const toggler = document.getElementById(`toggler-${counter}`);
