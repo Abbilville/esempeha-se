@@ -24,7 +24,7 @@ def get_llm_summary(query: str, documents: list, max_doc_length=700):
     
     context_parts = []
     for i, doc in enumerate(documents[:3]): # Use top 3 documents for context
-        doc_text = doc.get('text', '') # 'text' field contains the abstract
+        doc_text = doc.get('text', '')
         doc_title = doc.get('title', 'Document')
         # Ensure snippet is not empty and is a string
         snippet_text = str(doc_text) if doc_text else "No abstract available."

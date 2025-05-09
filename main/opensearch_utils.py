@@ -11,8 +11,8 @@ def get_opensearch_client():
     client = OpenSearch(
         hosts=[{'host': settings.OPENSEARCH_HOST, 'port': settings.OPENSEARCH_PORT}],
         http_conn_class=RequestsHttpConnection,
-        use_ssl=False, # Set to True if your OpenSearch uses SSL
-        verify_certs=False, # Set to True in production with valid certs
+        use_ssl=False,
+        verify_certs=False,
         ssl_show_warn=False,
     )
     return client
@@ -35,7 +35,6 @@ def create_index_if_not_exists(client, index_name):
                     "doc_id": {"type": "keyword"},
                     "title": {"type": "text", "analyzer": "english"},
                     "text": {"type": "text", "analyzer": "english"}
-                    # Removed "url" field as scifact doesn't have it
                 }
             }
         }
@@ -88,7 +87,7 @@ def index_beir_scifact_data(client, index_name, max_docs=None):
                 break
             
             # Access fields from the Hugging Face dataset dictionary
-            doc_id = str(doc['_id']) # Ensure doc_id is a string
+            doc_id = str(doc['_id'])
             title = doc.get('title', '') 
             text_content = doc.get('text', '')
 
