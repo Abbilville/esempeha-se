@@ -41,7 +41,7 @@ OPENSEARCH_URL = f"http://{OPENSEARCH_HOST}:{OPENSEARCH_PORT}"
 
 # HuggingFace API Key
 HUGGINGFACE_API_KEY = os.getenv('HUGGINGFACE_API_KEY')
-LLM_MODEL_ID = "meta-llama/Meta-Llama-3-8B-Instruct" # Example, can be changed
+LLM_MODEL_ID = "mistralai/Mistral-7B-Instruct-v0.3"
 
 
 # Application definition

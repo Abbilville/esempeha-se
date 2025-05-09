@@ -118,7 +118,7 @@ def search_documents(client, index_name, query_text, size=10):
         "query": {
             "multi_match": {
                 "query": query_text,
-                "fields": ["title^2", "text"] # Boost title matches
+                "fields": ["title^2", "text"] # Query matches against 'title' and 'text' (abstract)
             }
         },
         "size": size

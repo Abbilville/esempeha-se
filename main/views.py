@@ -34,6 +34,6 @@ def show_main(request):
         'search_results': search_results,
         'llm_summary': llm_summary,
         'error_message': error_message,
-        'search_engine_name': "Esempeha Search" 
+        'search_engine_name': "ESEMPEHA Search" 
     }
     return render(request, "index.html", context)
