@@ -71,28 +71,36 @@ def index_nfcorpus_data(client, index_name, max_docs=None):
     
     logger.info("Starting document indexing...")
     
-    raw_doc_attempt_count = 0
-    processed_docs_count = 0
+    num_processed_successfully = 0
+    num_read_attempts = 0
+    num_skipped_due_to_error = 0
 
-    # Wrapper for the iterator to safely handle decoding errors
-    def safe_doc_iterator(base_iterator):
-        nonlocal raw_doc_attempt_count
-        while True:
-            try:
-                raw_doc_attempt_count += 1
-                yield next(base_iterator)
-            except UnicodeDecodeError as ude:
-                logger.warning(f"UnicodeDecodeError at document attempt {raw_doc_attempt_count}: {ude}. Skipping this document.")
-                # Continue to the next document
-            except StopIteration:
-                break # End of dataset
-            except Exception as ex: # Catch other potential errors from iterator
-                logger.error(f"Unexpected error fetching document at attempt {raw_doc_attempt_count}: {ex}. Skipping this document.")
-                continue # Changed from break to continue
+    doc_iterator = dataset.docs_iter()
 
-    for doc in safe_doc_iterator(dataset.docs_iter()):
-        if max_docs and processed_docs_count >= max_docs:
+    while True:
+        doc = None
+        try:
+            num_read_attempts += 1 # Increment for each attempt to call next()
+            doc = next(doc_iterator)
+        except StopIteration:
+            logger.info("Finished iterating through all documents in the dataset.")
+            num_read_attempts -=1 # Correct count as the last attempt yielded no document
+            break 
+        except UnicodeDecodeError as ude:
+            logger.warning(f"UnicodeDecodeError at document read attempt {num_read_attempts}: {ude}. Skipping this document.")
+            num_skipped_due_to_error += 1
+            continue 
+        except Exception as ex: 
+            logger.error(f"Unexpected error fetching document at read attempt {num_read_attempts}: {ex}. Skipping this document.")
+            num_skipped_due_to_error += 1
+            continue
+
+        # If max_docs is set and we have processed enough documents
+        if max_docs and num_processed_successfully >= max_docs:
             logger.info(f"Reached max_docs limit of {max_docs}. Stopping indexing.")
+            # The current 'doc' was read but will not be processed.
+            # num_read_attempts already includes this read.
+            num_read_attempts -=1 # Adjust as this doc was read but not processed.
             break
         
         # NFCorpusDoc has doc_id, url, title, abstract
@@ -106,11 +114,16 @@ def index_nfcorpus_data(client, index_name, max_docs=None):
             "url": doc.url
         }
         index_document(client, index_name, doc.doc_id, document_data)
-        processed_docs_count += 1
-        if processed_docs_count % 1000 == 0: # Log based on successfully processed docs
-            logger.info(f"Indexed {processed_docs_count} documents...")
+        num_processed_successfully += 1
+        
+        if num_processed_successfully > 0 and num_processed_successfully % 1000 == 0: 
+            logger.info(f"Successfully indexed {num_processed_successfully} documents...")
+            logger.info(f"(Total read attempts: {num_read_attempts}, Skipped due to errors: {num_skipped_due_to_error})")
     
-    logger.info(f"Finished indexing. Successfully processed {processed_docs_count} documents out of {raw_doc_attempt_count -1 if raw_doc_attempt_count > 0 else 0} attempts.")
+    logger.info(f"Finished indexing. "
+                f"Successfully processed: {num_processed_successfully} documents. "
+                f"Skipped due to errors: {num_skipped_due_to_error} documents. "
+                f"Total documents read from iterator: {num_read_attempts}.")
 
 def search_documents(client, index_name, query_text, size=10):
     """Performs a search query against the OpenSearch index."""
