@@ -8,7 +8,7 @@
 {% block content %}
 <div class="container mx-auto px-4 py-8 max-w-4xl">
   <h1 class="text-3xl font-bold text-center text-gray-800 mb-2">{{ search_engine_name }}</h1>
-  <p class="text-center text-gray-600 mb-8">Your Medical Information Search Engine</p>
+  <p class="text-center text-gray-600 mb-8">Your Science Facts Information Search Engine</p>
   
   <div class="bg-white p-6 rounded-lg shadow-md mb-8">
     <form method="GET" action="{% url 'main:show_main' %}" class="flex flex-col sm:flex-row gap-2">
@@ -16,7 +16,7 @@
         type="text" 
         name="query" 
         value="{{ query }}"
-        placeholder="Enter your medical search query..." 
+        placeholder="Enter your science facts search query..." 
         class="flex-grow px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
       >
       <button 
@@ -57,11 +57,7 @@
       {% for result in search_results %}
       <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200 hover:shadow-2xl transition-all duration-300 ease-in-out">
         <h3 class="text-xl font-bold text-gray-800 hover:text-gray-600 transition-colors duration-200 mb-1">
-          {% if result.url %}
-          <a href="{{ result.url }}" target="_blank" rel="noopener noreferrer" class="hover:underline text-gray-800 hover:text-gray-600">{{ result.title|default:"Untitled Document" }}</a>
-          {% else %}
           {{ result.title|default:"Untitled Document" }}
-          {% endif %}
         </h3>
         <p class="text-xs text-gray-500 mb-3">
             <span class="font-medium text-gray-700">Document ID:</span> {{ result.doc_id }}
@@ -80,12 +76,6 @@
           </button>
           {% endif %}
         </div>
-
-        {% if result.url %}
-          <a href="{{ result.url }}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 hover:underline text-xs">
-            {{ result.url }}
-          </a>
-        {% endif %}
 
       </div>
       {% endfor %}

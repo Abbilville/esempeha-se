@@ -1,4 +1,4 @@
-# Esempeha Search - Medical Information Retrieval System
+# Esempeha Search - Science Facts Information Retrieval System
 
 ## Team: ESEMPEHA
 
@@ -12,7 +12,7 @@
 
 ## System Overview
 
-Esempeha Search is a Django-based web application that functions as a specialized search engine for medical information. It utilizes OpenSearch for efficient indexing and searching of documents and integrates a Large Language Model (LLM) via the HuggingFace Inference API to provide AI-generated summaries for search queries.
+Esempeha Search is a Django-based web application that functions as a specialized search engine for science facts information. It utilizes OpenSearch for efficient indexing and searching of documents and integrates a Large Language Model (LLM) via the HuggingFace Inference API to provide AI-generated summaries for search queries.
 
 ### Architecture
 
@@ -20,7 +20,7 @@ Esempeha Search is a Django-based web application that functions as a specialize
 2.  **Backend**: Django framework handling HTTP requests, business logic.
 3.  **Search**: OpenSearch is used as the search engine backend. Documents are indexed and queried using the `opensearch-py` library.
 4.  **LLM Integration**: A HuggingFace Inference API (e.g., Meta-Llama-3-8B-Instruct) is used to generate summaries from the top search results.
-5.  **Dataset**: The system uses the `nfcorpus` dataset from `ir-datasets`, which focuses on medical information, particularly from NutritionFacts.org.
+5.  **Dataset**: The system uses the `BeIR/scifact` dataset (corpus component) from Hugging Face, loaded using the `datasets` library. This dataset contains scientific documents.
 
 ## Prerequisites
 
@@ -92,7 +92,7 @@ Before running the application for the first time, or when you want to update th
 python manage.py index_data
 ```
 
-This command will download the `nfcorpus` dataset (if not already cached by `ir-datasets`), process it, and index it into OpenSearch. This might take a significant amount of time and disk space, especially on the first run.
+This command will download the `BeIR/scifact` dataset using the Hugging Face `datasets` library (if not already cached), process its corpus, and index it into OpenSearch. This might take a significant amount of time and disk space, especially on the first run.
 
 You can limit the number of documents indexed for testing purposes:
 
@@ -118,9 +118,9 @@ This will start the server, typically at http://127.0.0.1:8000/
 - **Backend**: Django
 - **Frontend**: HTML, Tailwind CSS
 - **Search Engine**: OpenSearch
-- **Dataset**: `nfcorpus` (from `ir-datasets.com`)
+- **Dataset**: `BeIR/scifact` (corpus) (from Hugging Face, loaded via `datasets` library)
 - **LLM**: HuggingFace Inference API (e.g., Meta-Llama-3-8B-Instruct)
-- **Python Libraries**: `opensearch-py`, `ir_datasets`, `huggingface_hub`, `django`, `python-dotenv`.
+- **Python Libraries**: `opensearch-py`, `datasets`, `huggingface_hub`, `django`, `python-dotenv`, `ir_datasets` (may still be present if other functionalities use it, or can be removed if fully replaced).
 
 ## Project Structure (Key Components)
 

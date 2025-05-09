@@ -35,7 +35,7 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", "esempeha-se-production.up.railway.ap
 # OpenSearch settings
 OPENSEARCH_HOST = os.getenv('OPENSEARCH_HOST', 'localhost')
 OPENSEARCH_PORT = int(os.getenv('OPENSEARCH_PORT', '9200'))
-OPENSEARCH_INDEX_NAME = 'nfcorpus_index'
+OPENSEARCH_INDEX_NAME = 'scifact_index'
 OPENSEARCH_URL = f"http://{OPENSEARCH_HOST}:{OPENSEARCH_PORT}"
 
 

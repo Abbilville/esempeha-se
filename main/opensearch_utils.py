@@ -1,7 +1,7 @@
 import os
 from opensearchpy import OpenSearch, RequestsHttpConnection, exceptions
 from django.conf import settings
-import ir_datasets
+from datasets import load_dataset # Changed import
 import logging
 
 logger = logging.getLogger(__name__)
@@ -34,8 +34,8 @@ def create_index_if_not_exists(client, index_name):
                 "properties": {
                     "doc_id": {"type": "keyword"},
                     "title": {"type": "text", "analyzer": "english"},
-                    "text": {"type": "text", "analyzer": "english"},
-                    "url": {"type": "keyword"} # NFCorpus docs have a URL
+                    "text": {"type": "text", "analyzer": "english"}
+                    # Removed "url" field as scifact doesn't have it
                 }
             }
         }
@@ -58,72 +58,70 @@ def index_document(client, index_name, doc_id, document_data):
     except Exception as e:
         logger.error(f"Error indexing document {doc_id}: {e}")
 
-def index_nfcorpus_data(client, index_name, max_docs=None):
-    """Loads nfcorpus data and indexes it into OpenSearch."""
-    logger.info("Loading nfcorpus dataset...")
+def index_beir_scifact_data(client, index_name, max_docs=None):
+    """Loads BeIR/scifact data using Hugging Face datasets library and indexes it into OpenSearch."""
+    logger.info("Loading BeIR/scifact dataset from Hugging Face...")
     try:
-        dataset = ir_datasets.load("nfcorpus") # Consider nfcorpus/train for a smaller set initially
+        # Load the corpus part of the BeIR/scifact dataset
+        # The "corpus" configuration directly loads the corpus documents.
+        # The load_dataset function for BeIR/scifact with "corpus" config returns a Dataset object.
+        hf_dataset = load_dataset("BeIR/scifact", "corpus", split="corpus")
     except Exception as e:
-        logger.error(f"Failed to load ir_datasets 'nfcorpus': {e}. Ensure it's downloaded or network is available.")
+        logger.error(f"Failed to load 'BeIR/scifact' dataset using Hugging Face datasets library: {e}. Ensure 'datasets' library is installed and network is available.")
         return
 
     create_index_if_not_exists(client, index_name)
     
-    logger.info("Starting document indexing...")
+    logger.info("Starting document indexing for BeIR/scifact...")
     
     num_processed_successfully = 0
     num_read_attempts = 0
     num_skipped_due_to_error = 0
 
-    doc_iterator = dataset.docs_iter()
-
-    while True:
-        doc = None
+    for doc in hf_dataset: # Iterate directly over the Hugging Face Dataset object
+        num_read_attempts += 1
         try:
-            num_read_attempts += 1 # Increment for each attempt to call next()
-            doc = next(doc_iterator)
-        except StopIteration:
-            logger.info("Finished iterating through all documents in the dataset.")
-            num_read_attempts -=1 # Correct count as the last attempt yielded no document
-            break 
-        except UnicodeDecodeError as ude:
-            logger.warning(f"UnicodeDecodeError at document read attempt {num_read_attempts}: {ude}. Skipping this document.")
-            num_skipped_due_to_error += 1
-            continue 
-        except Exception as ex: 
-            logger.error(f"Unexpected error fetching document at read attempt {num_read_attempts}: {ex}. Skipping this document.")
+            if max_docs and num_processed_successfully >= max_docs:
+                logger.info(f"Reached max_docs limit of {max_docs}. Stopping indexing.")
+                # Decrement num_read_attempts as this doc was fetched but not processed.
+                num_read_attempts -=1 
+                break
+            
+            # Access fields from the Hugging Face dataset dictionary
+            doc_id = str(doc['_id']) # Ensure doc_id is a string
+            title = doc.get('title', '') 
+            text_content = doc.get('text', '')
+
+            if not title and not text_content:
+                logger.warning(f"Document {doc_id} has no title or text. Skipping.")
+                num_skipped_due_to_error +=1
+                continue
+
+            document_data = {
+                "doc_id": doc_id,
+                "title": title,
+                "text": text_content,
+            }
+            index_document(client, index_name, doc_id, document_data)
+            num_processed_successfully += 1
+            
+            if num_processed_successfully > 0 and num_processed_successfully % 1000 == 0: 
+                logger.info(f"Successfully indexed {num_processed_successfully} BeIR/scifact documents...")
+                logger.info(f"(Total documents iterated: {num_read_attempts}, Skipped due to errors: {num_skipped_due_to_error})")
+        
+        except KeyError as ke:
+            logger.warning(f"Document at attempt {num_read_attempts} is missing a key: {ke}. Document: {doc}. Skipping.")
             num_skipped_due_to_error += 1
             continue
-
-        # If max_docs is set and we have processed enough documents
-        if max_docs and num_processed_successfully >= max_docs:
-            logger.info(f"Reached max_docs limit of {max_docs}. Stopping indexing.")
-            # The current 'doc' was read but will not be processed.
-            # num_read_attempts already includes this read.
-            num_read_attempts -=1 # Adjust as this doc was read but not processed.
-            break
-        
-        # NFCorpusDoc has doc_id, url, title, abstract
-        title = doc.title
-        content = doc.abstract # Use abstract as the main text content
-
-        document_data = {
-            "doc_id": doc.doc_id,
-            "title": title,
-            "text": content, # Store abstract in the 'text' field for consistency with mapping
-            "url": doc.url
-        }
-        index_document(client, index_name, doc.doc_id, document_data)
-        num_processed_successfully += 1
-        
-        if num_processed_successfully > 0 and num_processed_successfully % 1000 == 0: 
-            logger.info(f"Successfully indexed {num_processed_successfully} documents...")
-            logger.info(f"(Total read attempts: {num_read_attempts}, Skipped due to errors: {num_skipped_due_to_error})")
+        except Exception as ex: 
+            logger.error(f"Unexpected error processing document at attempt {num_read_attempts}: {ex}. Document: {doc}. Skipping.")
+            num_skipped_due_to_error += 1
+            continue
     
-    logger.info(f"Finished indexing. "
+    logger.info(f"Finished BeIR/scifact indexing. "
                 f"Successfully processed: {num_processed_successfully} documents. "
                 f"Skipped due to errors: {num_skipped_due_to_error} documents. "
-                f"Total documents read from iterator: {num_read_attempts}.")
+                f"Total documents iterated from dataset: {num_read_attempts}.")
 
 def search_documents(client, index_name, query_text, size=10):
     """Performs a search query against the OpenSearch index."""

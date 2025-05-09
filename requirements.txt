@@ -12,3 +12,4 @@ opensearch-py
 ir_datasets
 huggingface_hub
 sentence-transformers
+datasets
