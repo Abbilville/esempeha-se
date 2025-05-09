@@ -1,17 +1,33 @@
-# Sistem Temu Balik Informasi Project
+# Esempeha Search - Medical Information Retrieval System
 
 ## Team: ESEMPEHA
+
 ### Member:
+
 1. Abbilhaidar Farras Zulfikar (2206026012)
 2. Ravie Hasan Abud (2206031864)
 3. Steven Faustin Orginata (2206030855)
 
 ---
 
-## Prerequisite
+## System Overview
+
+Esempeha Search is a Django-based web application that functions as a specialized search engine for medical information. It utilizes OpenSearch for efficient indexing and searching of documents and integrates a Large Language Model (LLM) via the HuggingFace Inference API to provide AI-generated summaries for search queries.
+
+### Architecture
+
+1.  **Frontend**: Django templates with Tailwind CSS for user interface.
+2.  **Backend**: Django framework handling HTTP requests, business logic.
+3.  **Search**: OpenSearch is used as the search engine backend. Documents are indexed and queried using the `opensearch-py` library.
+4.  **LLM Integration**: A HuggingFace Inference API (e.g., Meta-Llama-3-8B-Instruct) is used to generate summaries from the top search results.
+5.  **Dataset**: The system uses the `nfcorpus` dataset from `ir-datasets`, which focuses on medical information, particularly from NutritionFacts.org.
+
+## Prerequisites
 
 - Python 3.9 or higher
 - pip (Python package installer)
+- An active OpenSearch instance (local or remote).
+- HuggingFace API Key (for LLM summarization).
 
 ## Setting Up the Environment
 
@@ -25,6 +41,7 @@ cd TK
 ### 2. Set Up a Virtual Environment
 
 #### On Windows:
+
 ```bash
 # Create a virtual environment
 python -m venv env
@@ -34,6 +51,7 @@ env\Scripts\activate
 ```
 
 #### On macOS/Linux:
+
 ```bash
 # Create a virtual environment
 python -m venv env
@@ -48,105 +66,106 @@ source env/bin/activate
 pip install -r requirements.txt
 ```
 
+### 4. Configure Environment Variables
+
+Create a `.env` file in the project root (TK/) with the following content:
+
+```env
+OPENSEARCH_HOST=your_opensearch_host_ip_or_domain  # e.g., localhost
+OPENSEARCH_PORT=your_opensearch_port              # e.g., 9200
+HUGGINGFACE_API_KEY=your_huggingface_api_key      # e.g., hf_xxxxxxxxxxxxxxx
+```
+
+Replace placeholders with your actual OpenSearch and HuggingFace details.
+
+### 5. Set Up OpenSearch
+
+Ensure your OpenSearch instance is running and accessible from the application. The application will attempt to create the necessary index (`nfcorpus_index`) if it doesn't exist during the data indexing step.
+
 ## Running the Project
 
-### 1. Start the Development Server
+### 1. Index Data into OpenSearch
+
+Before running the application for the first time, or when you want to update the search index, run the following management command:
+
+```bash
+python manage.py index_data
+```
+
+This command will download the `nfcorpus` dataset (if not already cached by `ir-datasets`), process it, and index it into OpenSearch. This might take a significant amount of time and disk space, especially on the first run.
+
+You can limit the number of documents indexed for testing purposes:
+
+```bash
+python manage.py index_data --max-docs 1000
+```
+
+### 2. Start the Development Server
 
 ```bash
 python manage.py runserver
 ```
 
-This will start the server at http://127.0.0.1:8000/
+This will start the server, typically at http://127.0.0.1:8000/
 
-### 2. Access the Application
+### 3. Access the Application
 
 - Main application: http://127.0.0.1:8000/
-- Admin interface: http://127.0.0.1:8000/admin/
+- Admin interface: http://127.0.0.1:8000/admin/ (Default Django admin)
 
-## Project Structure
+## Technologies Used
+
+- **Backend**: Django
+- **Frontend**: HTML, Tailwind CSS
+- **Search Engine**: OpenSearch
+- **Dataset**: `nfcorpus` (from `ir-datasets.com`)
+- **LLM**: HuggingFace Inference API (e.g., Meta-Llama-3-8B-Instruct)
+- **Python Libraries**: `opensearch-py`, `ir_datasets`, `huggingface_hub`, `django`, `python-dotenv`.
+
+## Project Structure (Key Components)
 
 ```
 TK/
 ├── esempeha/            # Main project directory
-│   ├── __init__.py      # init
-│   ├── asgi.py          # ASGI configuration
-│   ├── settings.py      # Project settings
-│   ├── urls.py          # URL configuration
-│   └── wsgi.py          # WSGI configuration
-├── main/                # App directory (actual name may vary)
-│   ├── models.py        # Database models
-│   ├── views.py         # View functions
-│   ├── urls.py          # URL patterns for this app
-│   └── templates/       # HTML templates
+│   ├── settings.py      # Project settings (incl. OpenSearch, API keys)
+│   └── urls.py          # Project URL configuration
+├── main/                # Main application directory
+│   ├── opensearch_utils.py # Utilities for OpenSearch interaction
+│   ├── llm_utils.py     # Utilities for LLM interaction
+│   ├── views.py         # View functions (search logic)
+│   ├── urls.py          # App-specific URL patterns
+│   ├── templates/       # HTML templates (index.html, base.html)
+│   └── management/
+│       └── commands/
+│           └── index_data.py # Django command for data indexing
 ├── static/              # Static files (CSS, JS, images)
-├── templates/           # base HTML
+├── templates/           # Global templates (e.g., 404.html)
+├── .env                 # Environment variables (MUST BE CREATED)
 ├── manage.py            # Django management script
-├── package-lock.json    # For setup tailwind
-├── package.json         # For setup tailwind
-├── requirements.txt     # Django requirements module
-├── tailwind.config.js   # For setup tailwind
+├── requirements.txt     # Python dependencies
 └── README.md            # This file
 ```
 
-## Common Tasks
+## Common Tasks & Troubleshooting
 
-### Making Migrations After Model Changes
+(Refer to the original README section, and add specifics if any arise for OpenSearch or LLM)
 
-```bash
-python manage.py makemigrations
-python manage.py migrate
-```
+### OpenSearch Connection Issues
 
-### Collecting Static Files for Production
+- Ensure OpenSearch is running and accessible at the host/port specified in `.env`.
+- Check OpenSearch logs for any errors.
+- Verify firewall rules if OpenSearch is on a different machine/network.
 
-```bash
-python manage.py collectstatic
-```
+### LLM Summarization Issues
 
-### Running Tests
-
-```bash
-python manage.py test
-```
-
-## Troubleshooting
-
-### Database Issues
-
-If you encounter database issues, you might need to reset your database:
-
-```bash
-# Delete the database file (for SQLite)
-rm db.sqlite3
-
-# Recreate the database
-python manage.py migrate
-```
-
-### Package Installation Problems
-
-If you're having trouble with package installations, try updating pip:
-
-```bash
-pip install --upgrade pip
-```
-
-### Port Already in Use
-
-If port 8000 is already in use, you can specify a different port:
-
-```bash
-python manage.py runserver 8001
-```
-
-## Additional Resources
-
-- [Django Documentation](https://docs.djangoproject.com/)
-- [Django REST Framework Documentation](https://www.django-rest-framework.org/)
+- Ensure `HUGGINGFACE_API_KEY` is correctly set in `.env`.
+- Check for rate limits on the HuggingFace Inference API (free tier has limitations).
+- Verify network connectivity to `api-inference.huggingface.co`.
 
 ## Contact
 
-If you have any questions or issues, please contact
+If you have any questions or issues, please contact:
+
 - Abbilhaidar Farras Zulfikar: abbilhaidar.farras@ui.ac.id
 - Ravie Hasan Abud: ravie.hasan@ui.ac.id
 - Steven Faustin Orginata: steven.faustin@ui.ac.id

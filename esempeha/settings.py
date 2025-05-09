@@ -12,9 +12,13 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from .env file
+load_dotenv(BASE_DIR / '.env')
 
 
 # Quick-start development settings - unsuitable for production
@@ -27,6 +31,17 @@ SECRET_KEY = 'django-insecure-sb7rbv49-h4bj7$x2ck#+mx^ao&(s!8y1s+)56j8e%*qk$6!81
 DEBUG = True
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "esempeha-se-production.up.railway.app"]
+
+# OpenSearch settings
+OPENSEARCH_HOST = os.getenv('OPENSEARCH_HOST', 'localhost')
+OPENSEARCH_PORT = int(os.getenv('OPENSEARCH_PORT', '9200'))
+OPENSEARCH_INDEX_NAME = 'nfcorpus_index'
+OPENSEARCH_URL = f"http://{OPENSEARCH_HOST}:{OPENSEARCH_PORT}"
+
+
+# HuggingFace API Key
+HUGGINGFACE_API_KEY = os.getenv('HUGGINGFACE_API_KEY')
+LLM_MODEL_ID = "meta-llama/Meta-Llama-3-8B-Instruct" # Example, can be changed
 
 
 # Application definition
