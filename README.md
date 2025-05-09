@@ -71,7 +71,7 @@ pip install -r requirements.txt
 Create a `.env` file in the project root (TK/) with the following content:
 
 ```env
-OPENSEARCH_HOST=your_opensearch_host_ip_or_domain  # e.g., localhost
+OPENSEARCH_HOST=your_opensearch_host_ip_or_domain # e.g., localhost
 OPENSEARCH_PORT=your_opensearch_port              # e.g., 9200
 HUGGINGFACE_API_KEY=your_huggingface_api_key      # e.g., hf_xxxxxxxxxxxxxxx
 ```
@@ -80,7 +80,7 @@ Replace placeholders with your actual OpenSearch and HuggingFace details.
 
 ### 5. Set Up OpenSearch
 
-Ensure your OpenSearch instance is running and accessible from the application. The application will attempt to create the necessary index (`nfcorpus_index`) if it doesn't exist during the data indexing step.
+Ensure your OpenSearch instance is running on Docker (e.g., localhost:9200) and accessible from the application. The application will attempt to create the necessary index (`scifact_index`) if it doesn't exist during the data indexing step.
 
 ## Running the Project
 

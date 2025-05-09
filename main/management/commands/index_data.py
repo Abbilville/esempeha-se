@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.conf import settings
-from main.opensearch_utils import get_opensearch_client, index_beir_scifact_data  # Changed import
+from main.opensearch_utils import get_opensearch_client, index_beir_scifact_data
 import logging
 
 # Configure basic logging for the command
