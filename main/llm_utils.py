@@ -1,13 +1,22 @@
 import os
 import requests
+import hashlib
 from django.conf import settings
+from django.core.cache import cache
 import logging
 
 logger = logging.getLogger(__name__)
 
+def get_cache_key(query, documents):
+    """Generate cache key for query and documents"""
+    # Create a hash of the query and document IDs
+    doc_ids = [doc.get('doc_id', doc.get('id', '')) for doc in documents]
+    content = f"{query}:{':'.join(sorted(doc_ids))}"
+    return f"llm_summary:{hashlib.md5(content.encode()).hexdigest()}"
+
 def get_llm_summary(query: str, documents: list, max_doc_length=700):
     """
-    Generates a summary using HuggingFace Inference API based on the query and document snippets.
+    Generates a summary using HuggingFace Inference API with caching.
     """
     api_key = settings.HUGGINGFACE_API_KEY
     model_id = settings.LLM_MODEL_ID
@@ -20,13 +29,19 @@ def get_llm_summary(query: str, documents: list, max_doc_length=700):
     if not documents:
         return "No documents provided."
 
+    # Check cache first
+    cache_key = get_cache_key(query, documents)
+    cached_summary = cache.get(cache_key)
+    if cached_summary:
+        logger.info(f"Using cached LLM summary for query: {query}")
+        return cached_summary
+
     headers = {"Authorization": f"Bearer {api_key}"}
     
     context_parts = []
-    for i, doc in enumerate(documents[:3]): # Use top 3 documents for context
+    for i, doc in enumerate(documents[:3]):
         doc_text = doc.get('text', '')
         doc_title = doc.get('title', 'Document')
-        # Ensure snippet is not empty and is a string
         snippet_text = str(doc_text) if doc_text else "No abstract available."
         snippet = snippet_text[:max_doc_length] + "..." if len(snippet_text) > max_doc_length else snippet_text
         context_parts.append(f"Document {i+1} (Title: {doc_title}):\n{snippet}")
@@ -45,13 +60,13 @@ def get_llm_summary(query: str, documents: list, max_doc_length=700):
     payload = {
         "inputs": prompt,
         "parameters": {
-            "max_new_tokens": 250, # Max tokens for the generated summary
-            "temperature": 0.5,    # Controls randomness, lower is more deterministic
-            "return_full_text": False, # Return only the generated text
-            "wait_for_model": True, # Wait if the model is loading
+            "max_new_tokens": 250,
+            "temperature": 0.5,
+            "return_full_text": False,
+            "wait_for_model": True,
         },
         "options": {
-            "use_cache": False # Disable cache for fresh responses
+            "use_cache": False
         }
     }
 
@@ -63,6 +78,10 @@ def get_llm_summary(query: str, documents: list, max_doc_length=700):
             result = response.json()
             if isinstance(result, list) and len(result) > 0 and "generated_text" in result[0]:
                 summary = result[0]["generated_text"].strip()
+                
+                # Cache the summary
+                cache.set(cache_key, summary, timeout=getattr(settings, 'LLM_CACHE_TIMEOUT', 3600))
+                
                 logger.info(f"LLM summary received for query '{query}': {summary[:100]}...")
                 return summary
             else:
@@ -70,15 +89,14 @@ def get_llm_summary(query: str, documents: list, max_doc_length=700):
                 return "Could not generate summary due to API response format."
         else:
             error_content = response.text
-            logger.error(
-                f"LLM API request failed for query '{query}' with status {response.status_code}: {error_content}"
-            )
+            logger.error(f"LLM API request failed for query '{query}' with status {response.status_code}: {error_content}")
+            
             if response.status_code == 401:
                 return "LLM API request failed: Unauthorized (check API key)."
             elif response.status_code == 429:
-                 return "LLM service is currently busy (rate limit exceeded). Please try again later."
+                return "LLM service is currently busy (rate limit exceeded). Please try again later."
             elif response.status_code >= 500:
-                 return f"LLM service unavailable (server error {response.status_code}). Please try again later."
+                return f"LLM service unavailable (server error {response.status_code}). Please try again later."
             return f"Failed to get summary from LLM (HTTP {response.status_code})."
 
     except requests.exceptions.Timeout:

@@ -13,3 +13,17 @@ ir_datasets
 huggingface_hub
 sentence-transformers
 datasets
+textdistance
+nltk
+spacy>=3.4.0
+redis
+django-redis
+textdistance
+symspellpy
+transformers
+torch
+numpy
+scikit-learn
+matplotlib
+seaborn
+pandas

@@ -40,6 +40,24 @@ OPENSEARCH_PASSWORD = os.getenv('OPENSEARCH_PASSWORD')
 OPENSEARCH_USE_SSL = os.getenv('OPENSEARCH_USE_SSL', 'False').lower() == 'true'
 OPENSEARCH_INDEX_NAME = 'scifact_index'
 
+# Text preprocessing settings
+TEXT_PREPROCESSING_METHOD = 'spacy'
+
+# Caching settings
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+        'TIMEOUT': 3600,
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000,
+        }
+    }
+}
+
+# Cache timeout for LLM responses (in seconds)
+LLM_CACHE_TIMEOUT = 3600  # 1 hour
+
 # Construct OPENSEARCH_URL based on SSL settings
 _opensearch_scheme = "https" if OPENSEARCH_USE_SSL else "http"
 if OPENSEARCH_USERNAME and OPENSEARCH_PASSWORD:

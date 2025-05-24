@@ -11,25 +11,58 @@
   <p class="text-center text-gray-600 mb-8">Your Science Facts Information Search Engine</p>
   
   <div class="bg-white p-6 rounded-lg shadow-md mb-8">
-    <form method="GET" action="{% url 'main:show_main' %}" class="flex flex-col sm:flex-row gap-2">
-      <input 
-        type="text" 
-        name="query" 
-        value="{{ query }}"
-        placeholder="Enter your science facts search query..." 
-        class="flex-grow px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-      >
-      <button 
-        type="submit" 
-        class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md transition duration-200 ease-in-out"
-      >
-        Search
-      </button>
+    <form method="GET" action="{% url 'main:show_main' %}" class="flex flex-col gap-4" id="search-form">
+      <div class="flex flex-col sm:flex-row gap-2 relative">
+        <div class="flex-grow relative">
+          <input 
+            type="text" 
+            name="query" 
+            id="search-input"
+            value="{{ query }}"
+            placeholder="Enter your science facts search query..." 
+            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            autocomplete="off"
+          >
+          <div id="autocomplete-suggestions" class="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-md shadow-lg z-50 hidden max-h-60 overflow-y-auto">
+          </div>
+        </div>
+        <button 
+          type="submit" 
+          class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md transition duration-200 ease-in-out"
+        >
+          Search
+        </button>
+      </div>
+      
+      <div class="flex items-center gap-4">
+        <label class="flex items-center">
+          <input type="checkbox" name="semantic" value="true" {% if use_semantic %}checked{% endif %} class="mr-2">
+          <span class="text-sm text-gray-700">Use Semantic Search</span>
+        </label>
+      </div>
     </form>
   </div>
 
+  {% if query_suggestions %}
+  <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg shadow-md mb-6">
+    <div class="p-4">
+      <div class="flex items-center mb-3">
+        <strong class="font-bold text-blue-800">Did you mean:</strong>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        {% for suggestion in query_suggestions %}
+        <a href="?query={{ suggestion|urlencode }}{% if use_semantic %}&semantic=true{% endif %}" 
+           class="inline-block bg-blue-100 hover:bg-blue-200 text-blue-800 hover:text-blue-900 px-3 py-1 rounded-full text-sm font-medium transition duration-200 border border-blue-300 hover:border-blue-400">
+          "{{ suggestion }}"
+        </a>
+        {% endfor %}
+      </div>
+      <p class="text-xs text-blue-600 mt-2">Click on a suggestion to search with the corrected term</p>
+    </div>
+  </div>
+  {% endif %}
+
   {% if error_message and not llm_summary and not search_results %}
-  {# Display general error only if no results and no summary #}
   <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
     <strong class="font-bold">Error:</strong>
     <span class="block sm:inline">{{ error_message }}</span>
@@ -42,9 +75,7 @@
     <div class="bg-white p-6 rounded-xl shadow-lg mb-8 border border-gray-200">
       <p class="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">{{ llm_summary }}</p>
     </div>
-    {% elif error_message and not search_results %} 
-    {% elif error_message %} 
-      {# If there was an error but there ARE search results, show a specific LLM error #}
+    {% elif error_message and search_results %} 
       <div class="bg-yellow-50 border border-yellow-300 text-yellow-700 px-4 py-3 rounded-lg shadow-md relative mb-6" role="alert">
         <strong class="font-bold">Note:</strong>
         <span class="block sm:inline">AI summary could not be generated. {{ error_message }}</span>
@@ -53,7 +84,10 @@
 
     {% if search_results %}
     <div class="space-y-6"> 
-      <h2 class="text-2xl font-bold text-black mb-4">🔍 Search Results ({{ search_results|length }} found)</h2>
+      <h2 class="text-2xl font-bold text-black mb-4">
+        🔍 Search Results ({{ search_results|length }} found)
+        {% if use_semantic %}<span class="text-sm font-normal text-gray-600">- Semantic Search Enabled</span>{% endif %}
+      </h2>
       {% for result in search_results %}
       <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200 hover:shadow-2xl transition-all duration-300 ease-in-out">
         <h3 class="text-xl font-bold text-gray-800 hover:text-gray-600 transition-colors duration-200 mb-1">
@@ -76,13 +110,15 @@
           </button>
           {% endif %}
         </div>
-
       </div>
       {% endfor %}
     </div>
     {% elif not error_message and query %} 
     <div class="bg-white p-6 rounded-lg shadow-md">
         <p class="text-gray-700">No results found for your query: "{{ query }}"</p>
+        {% if query_suggestions %}
+        <p class="text-sm text-gray-600 mt-2">Try the suggested corrections above for better results.</p>
+        {% endif %}
     </div>
     {% endif %}
   {% endif %}
@@ -95,16 +131,154 @@ function toggleText(counter) {
     const toggler = document.getElementById(`toggler-${counter}`);
 
     if (shortAbstract.classList.contains('hidden')) {
-        // Show short, hide full
         shortAbstract.classList.remove('hidden');
         fullAbstract.classList.add('hidden');
         toggler.textContent = 'See more';
     } else {
-        // Show full, hide short
         shortAbstract.classList.add('hidden');
         fullAbstract.classList.remove('hidden');
         toggler.textContent = 'See less';
     }
 }
+
+// Enhanced autocomplete functionality
+const searchInput = document.getElementById('search-input');
+const suggestionsDiv = document.getElementById('autocomplete-suggestions');
+const searchForm = document.getElementById('search-form');
+let debounceTimer;
+let selectedIndex = -1;
+
+searchInput.addEventListener('input', function() {
+    clearTimeout(debounceTimer);
+    const query = this.value.trim();
+    selectedIndex = -1;
+    
+    console.log('Input changed:', query);
+    
+    if (query.length < 2) {
+        hideSuggestions();
+        return;
+    }
+    
+    debounceTimer = setTimeout(() => {
+        fetchSuggestions(query);
+    }, 300);
+});
+
+// Keyboard navigation for autocomplete
+searchInput.addEventListener('keydown', function(e) {
+    const suggestions = suggestionsDiv.querySelectorAll('.suggestion-item');
+    
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectedIndex = Math.min(selectedIndex + 1, suggestions.length - 1);
+        updateSelection(suggestions);
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectedIndex = Math.max(selectedIndex - 1, -1);
+        updateSelection(suggestions);
+    } else if (e.key === 'Enter') {
+        if (selectedIndex >= 0 && suggestions[selectedIndex]) {
+            e.preventDefault();
+            selectSuggestion(suggestions[selectedIndex].textContent.trim());
+        }
+    } else if (e.key === 'Escape') {
+        hideSuggestions();
+    }
+});
+
+function fetchSuggestions(query) {
+    console.log('Fetching suggestions for:', query);
+    
+    const url = `{% url 'main:autocomplete' %}?q=${encodeURIComponent(query)}`;
+    console.log('Request URL:', url);
+    
+    fetch(url)
+        .then(response => {
+            console.log('Response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Received data:', data);
+            if (data.error) {
+                console.error('Server error:', data.error);
+                hideSuggestions();
+            } else if (data.suggestions && data.suggestions.length > 0) {
+                showSuggestions(data.suggestions);
+            } else {
+                console.log('No suggestions received');
+                hideSuggestions();
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching suggestions:', error);
+            hideSuggestions();
+        });
+}
+
+function showSuggestions(suggestions) {
+    console.log('Showing suggestions:', suggestions);
+    suggestionsDiv.innerHTML = '';
+    
+    if (!suggestions || suggestions.length === 0) {
+        hideSuggestions();
+        return;
+    }
+    
+    suggestions.forEach((suggestion, index) => {
+        const div = document.createElement('div');
+        div.className = 'suggestion-item px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm border-b border-gray-100 last:border-b-0';
+        div.textContent = suggestion;
+        div.addEventListener('click', () => selectSuggestion(suggestion));
+        div.addEventListener('mouseenter', () => {
+            selectedIndex = index;
+            updateSelection(suggestionsDiv.querySelectorAll('.suggestion-item'));
+        });
+        suggestionsDiv.appendChild(div);
+    });
+    
+    suggestionsDiv.classList.remove('hidden');
+}
+
+function hideSuggestions() {
+    suggestionsDiv.classList.add('hidden');
+    selectedIndex = -1;
+}
+
+function selectSuggestion(suggestion) {
+    console.log('Selected suggestion:', suggestion);
+    searchInput.value = suggestion;
+    hideSuggestions();
+    searchForm.submit();
+}
+
+function updateSelection(suggestions) {
+    suggestions.forEach((item, index) => {
+        if (index === selectedIndex) {
+            item.classList.add('bg-blue-100');
+        } else {
+            item.classList.remove('bg-blue-100');
+        }
+    });
+}
+
+document.addEventListener('click', function(event) {
+    if (!searchInput.contains(event.target) && !suggestionsDiv.contains(event.target)) {
+        hideSuggestions();
+    }
+});
+
+searchInput.addEventListener('focus', function() {
+    if (this.value.trim().length >= 2) {
+        fetchSuggestions(this.value.trim());
+    }
+});
+
+console.log('Autocomplete script loaded');
+console.log('Search input element:', searchInput);
+console.log('Suggestions div element:', suggestionsDiv);
 </script>
 {% endblock content %}

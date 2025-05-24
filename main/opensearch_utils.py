@@ -30,6 +30,15 @@ def create_index_if_not_exists(client, index_name):
                     "analyzer": {
                         "default": {
                             "type": "standard"
+                        },
+                        "scientific_analyzer": {
+                            "type": "custom",
+                            "tokenizer": "standard",
+                            "filter": [
+                                "lowercase",
+                                "stop",
+                                "snowball"
+                            ]
                         }
                     }
                 }
@@ -37,8 +46,22 @@ def create_index_if_not_exists(client, index_name):
             "mappings": {
                 "properties": {
                     "doc_id": {"type": "keyword"},
-                    "title": {"type": "text", "analyzer": "english"},
-                    "text": {"type": "text", "analyzer": "english"}
+                    "title": {
+                        "type": "text", 
+                        "analyzer": "scientific_analyzer",
+                        "fields": {
+                            "raw": {"type": "keyword"}
+                        }
+                    },
+                    "text": {
+                        "type": "text", 
+                        "analyzer": "scientific_analyzer",
+                        "fields": {
+                            "raw": {"type": "keyword"}
+                        }
+                    },
+                    "title_processed": {"type": "text", "analyzer": "scientific_analyzer"},
+                    "text_processed": {"type": "text", "analyzer": "scientific_analyzer"}
                 }
             }
         }
@@ -65,6 +88,8 @@ def index_beir_scifact_data(client, index_name, max_docs=None):
     """Loads BeIR/scifact data using Hugging Face datasets library and indexes it into OpenSearch."""
     logger.info("Loading BeIR/scifact dataset from Hugging Face...")
     try:
+        from .text_preprocessing import preprocessor
+        
         # Load the corpus part of the BeIR/scifact dataset
         # The "corpus" configuration directly loads the corpus documents.
         # The load_dataset function for BeIR/scifact with "corpus" config returns a Dataset object.
@@ -100,10 +125,16 @@ def index_beir_scifact_data(client, index_name, max_docs=None):
                 num_skipped_due_to_error +=1
                 continue
 
+            # Preprocess text for better indexing
+            title_processed = preprocessor.preprocess_for_indexing(title)
+            text_processed = preprocessor.preprocess_for_indexing(text_content)
+
             document_data = {
                 "doc_id": doc_id,
                 "title": title,
                 "text": text_content,
+                "title_processed": title_processed,
+                "text_processed": text_processed,
             }
             index_document(client, index_name, doc_id, document_data)
             num_processed_successfully += 1
@@ -112,31 +143,72 @@ def index_beir_scifact_data(client, index_name, max_docs=None):
                 logger.info(f"Successfully indexed {num_processed_successfully} BeIR/scifact documents...")
                 logger.info(f"(Total documents iterated: {num_read_attempts}, Skipped due to errors: {num_skipped_due_to_error})")
         
-        except KeyError as ke:
-            logger.warning(f"Document at attempt {num_read_attempts} is missing a key: {ke}. Document: {doc}. Skipping.")
-            num_skipped_due_to_error += 1
-            continue
         except Exception as ex: 
-            logger.error(f"Unexpected error processing document at attempt {num_read_attempts}: {ex}. Document: {doc}. Skipping.")
+            logger.error(f"Error processing document {num_read_attempts}: {ex}")
             num_skipped_due_to_error += 1
             continue
     
-    logger.info(f"Finished BeIR/scifact indexing. "
-                f"Successfully processed: {num_processed_successfully} documents. "
-                f"Skipped due to errors: {num_skipped_due_to_error} documents. "
-                f"Total documents iterated from dataset: {num_read_attempts}.")
+    logger.info(f"Finished indexing. Processed: {num_processed_successfully}, Skipped: {num_skipped_due_to_error}")
 
-def search_documents(client, index_name, query_text, size=10):
+def search_documents(client, index_name, query_text, size=10, use_semantic=False):
     """Performs a search query against the OpenSearch index."""
-    search_body = {
-        "query": {
-            "multi_match": {
-                "query": query_text,
-                "fields": ["title^2", "text"] # Query matches against 'title' and 'text' (abstract)
+    from .text_preprocessing import preprocessor
+    from .semantic_search import semantic_engine
+    
+    # Preprocess query
+    processed_query = preprocessor.preprocess_query(query_text)
+    
+    if use_semantic and semantic_engine.model:
+        # Combine traditional and semantic search
+        semantic_results = semantic_engine.semantic_search(query_text, top_k=size)
+        
+        if semantic_results:
+            # Get documents by IDs from semantic search
+            doc_ids = [result['doc_id'] for result in semantic_results]
+            search_body = {
+                "query": {
+                    "bool": {
+                        "should": [
+                            {
+                                "terms": {
+                                    "doc_id": doc_ids
+                                }
+                            },
+                            {
+                                "multi_match": {
+                                    "query": processed_query,
+                                    "fields": ["title_processed^2", "text_processed", "title^1.5", "text"]
+                                }
+                            }
+                        ]
+                    }
+                },
+                "size": size
             }
-        },
-        "size": size
-    }
+        else:
+            # Fallback to traditional search
+            search_body = {
+                "query": {
+                    "multi_match": {
+                        "query": processed_query,
+                        "fields": ["title_processed^2", "text_processed", "title^1.5", "text"]
+                    }
+                },
+                "size": size
+            }
+    else:
+        # Traditional search with processed query
+        search_body = {
+            "query": {
+                "multi_match": {
+                    "query": processed_query,
+                    "fields": ["title_processed^2", "text_processed", "title^1.5", "text"],
+                    "fuzziness": "AUTO"
+                }
+            },
+            "size": size
+        }
+    
     try:
         response = client.search(index=index_name, body=search_body)
         hits = [{"id": hit["_id"], **hit["_source"]} for hit in response["hits"]["hits"]]

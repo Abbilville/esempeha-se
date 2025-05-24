@@ -17,9 +17,51 @@ class Command(BaseCommand):
             help='Maximum number of documents to index from BeIR/scifact.',
             default=None # Index all by default
         )
+        parser.add_argument(
+            '--skip-check',
+            action='store_true',
+            help='Skip dependency checking',
+        )
+
+    def check_dependencies(self):
+        """Check if required dependencies are available"""
+        missing_deps = []
+        
+        # Check spaCy
+        try:
+            import spacy
+            try:
+                spacy.load("en_core_web_sm")
+            except OSError:
+                self.stdout.write(self.style.WARNING(
+                    'spaCy English model not found. Install with: python -m spacy download en_core_web_sm'
+                ))
+        except ImportError:
+            missing_deps.append('spacy')
+        
+        # Check datasets
+        try:
+            import datasets
+        except ImportError:
+            missing_deps.append('datasets')
+        
+        if missing_deps:
+            self.stderr.write(self.style.ERROR(
+                f'Missing dependencies: {", ".join(missing_deps)}'
+            ))
+            self.stderr.write(self.style.ERROR(
+                'Install with: pip install ' + ' '.join(missing_deps)
+            ))
+            return False
+        
+        return True
 
     def handle(self, *args, **options):
         self.stdout.write(self.style.SUCCESS('Starting BeIR/scifact data indexing process...'))
+        
+        if not options['skip_check'] and not self.check_dependencies():
+            self.stderr.write(self.style.ERROR('Dependency check failed. Use --skip-check to proceed anyway.'))
+            return
         
         max_docs_to_index = options['max_docs']
 
