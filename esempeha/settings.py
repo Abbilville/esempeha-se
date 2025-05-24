@@ -35,8 +35,17 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", "esempeha-se-production.up.railway.ap
 # OpenSearch settings
 OPENSEARCH_HOST = os.getenv('OPENSEARCH_HOST', 'localhost')
 OPENSEARCH_PORT = int(os.getenv('OPENSEARCH_PORT', '9200'))
+OPENSEARCH_USERNAME = os.getenv('OPENSEARCH_USERNAME')
+OPENSEARCH_PASSWORD = os.getenv('OPENSEARCH_PASSWORD')
+OPENSEARCH_USE_SSL = os.getenv('OPENSEARCH_USE_SSL', 'False').lower() == 'true'
 OPENSEARCH_INDEX_NAME = 'scifact_index'
-OPENSEARCH_URL = f"http://{OPENSEARCH_HOST}:{OPENSEARCH_PORT}"
+
+# Construct OPENSEARCH_URL based on SSL settings
+_opensearch_scheme = "https" if OPENSEARCH_USE_SSL else "http"
+if OPENSEARCH_USERNAME and OPENSEARCH_PASSWORD:
+    OPENSEARCH_URL = f"{_opensearch_scheme}://{OPENSEARCH_USERNAME}:******@{OPENSEARCH_HOST}:{OPENSEARCH_PORT}" # Mask password in logs/settings display
+else:
+    OPENSEARCH_URL = f"{_opensearch_scheme}://{OPENSEARCH_HOST}:{OPENSEARCH_PORT}"
 
 
 # HuggingFace API Key

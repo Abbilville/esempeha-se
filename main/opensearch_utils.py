@@ -8,13 +8,17 @@ logger = logging.getLogger(__name__)
 
 def get_opensearch_client():
     """Initializes and returns an OpenSearch client."""
-    client = OpenSearch(
-        hosts=[{'host': settings.OPENSEARCH_HOST, 'port': settings.OPENSEARCH_PORT}],
-        http_conn_class=RequestsHttpConnection,
-        use_ssl=False,
-        verify_certs=False,
-        ssl_show_warn=False,
-    )
+    client_args = {
+        'hosts': [{'host': settings.OPENSEARCH_HOST, 'port': settings.OPENSEARCH_PORT}],
+        'http_conn_class': RequestsHttpConnection,
+        'use_ssl': settings.OPENSEARCH_USE_SSL,
+        'verify_certs': True,  # Set to False if you have issues with Bonsai's SSL certificate and don't have a CA bundle
+        'ssl_show_warn': False,
+    }
+    if settings.OPENSEARCH_USERNAME and settings.OPENSEARCH_PASSWORD:
+        client_args['http_auth'] = (settings.OPENSEARCH_USERNAME, settings.OPENSEARCH_PASSWORD)
+
+    client = OpenSearch(**client_args)
     return client
 
 def create_index_if_not_exists(client, index_name):
