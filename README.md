@@ -6,8 +6,8 @@
 2. Ravie Hasan Abud (2206031864)
 3. Steven Faustin Orginata (2206030855)
 
-### Deployment Status
-[![Netlify Status](https://api.netlify.com/api/v1/badges/3f6a6daf-48b8-43fa-8274-da3a9f2e8303/deploy-status)](https://app.netlify.com/projects/esempeha-search/deploys)
+### Deployment
+Link Deployment: [https://esempeha-search.com](tart-honor-abbilville-e18670b6.koyeb.app/)
 
 ---
 
