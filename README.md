@@ -1,4 +1,4 @@
-# Sistem Temu Balik Informasi Project
+# Temu-Balik Informasi Project
 
 ## Team: ESEMPEHA
 ### Member:
