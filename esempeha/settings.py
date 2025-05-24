@@ -30,7 +30,7 @@ SECRET_KEY = 'django-insecure-sb7rbv49-h4bj7$x2ck#+mx^ao&(s!8y1s+)56j8e%*qk$6!81
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "esempeha-se-production.up.railway.app"]
+ALLOWED_HOSTS = ["*"]
 
 # OpenSearch settings
 OPENSEARCH_HOST = os.getenv('OPENSEARCH_HOST', 'localhost')
@@ -69,7 +69,6 @@ else:
 # HuggingFace API Key
 HUGGINGFACE_API_KEY = os.getenv('HUGGINGFACE_API_KEY')
 LLM_MODEL_ID = "mistralai/Mistral-7B-Instruct-v0.3"
-
 
 # Application definition
 
